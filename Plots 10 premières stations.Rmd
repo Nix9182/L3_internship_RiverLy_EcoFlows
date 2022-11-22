@@ -1,0 +1,449 @@
+---
+title: "10 first stations"
+output: html_document
+date: "2022-11-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(stringr)
+library(ggpubr)
+library(ggforce)
+library(vegan)
+library(dplyr)
+```
+
+```{r}
+#setting the work direction
+setwd("C:\\Users\\cbodson\\Desktop\\Analyse_données")
+
+```
+
+```{r}
+#Creating a function to clean taxa names to use as a color filter
+Clean_String <-function(string) {
+  new_string <- str_split(string, "_")[[1]][2]
+  new_string <- str_replace_all(new_string, "[^A-Z]", "")[[1]][1]
+  return(new_string)
+}
+```
+
+```{r}
+df <- read_excel("dataset_isotopes_compile.xlsx")
+#We have to use as.character to be able to put the new collection of names while being able to use them in aes()
+taxon_clean <- as.character(lapply(df$taxon, function(x){Clean_String(x)}))
+#creating a new column
+df["taxon_clean"]<-taxon_clean
+#getting rid of the aspartame data as it used only for calibration 
+df<- df[df$taxon_clean !=as.character('ASP'),]
+```
+
+```{r}
+#set limits for axis
+xmin <- -38.5
+xmax <- -24
+ymin <- 1
+ymax <- 11
+```
+
+
+```{r}
+all <- ggplot(df)+geom_point(aes(d13C_norm,d15N_norm,
+                                 color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)
+all
+```
+
+```{r}
+#Creating functions that take taxon name or land type and plot the scatterplot of the desired category
+Plotify_taxon <- function(taxon_name) {
+    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_point(aes(d13C_norm,d15N_norm, color=type))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+}
+
+Plotify_type <- function(type_land) {
+    plot <- ggplot(df[df$type ==as.character(type_land),])+geom_point(aes(d13C_norm,d15N_norm, color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+}
+
+Plotify_taxon_type <- function(taxon_name, type_land) {
+    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+}
+
+Boxplot_carbon_taxon <- function(taxon_name) {
+  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Land Use')+ylab('δ13C (‰)')
+}
+
+Boxplot_nitrogen_taxon <- function(taxon_name) {
+  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d15N_norm))+ylim(ymin,ymax)+xlab('Land Use')+ylab('δ15N (‰)')
+}
+#Function to add trophic role 
+Trophify <- function(taxon_name) {
+  if (taxon_name == 'SIMU' | taxon_name == 'HYDROP') {
+    troph <- 'Filter'
+  } 
+  else if (taxon_name == 'BAET' | taxon_name == 'HEPTA') {
+    troph <- 'Grazer'
+  } 
+  else if (taxon_name == 'GAM') {
+    troph <- 'Shredder'
+  } 
+  else if (taxon_name == 'CALOP' | taxon_name == 'RHYACO' | taxon_name == 'PERL') {
+    troph <- 'Predator'
+  } 
+  else if (taxon_name == 'TRF' | taxon_name == 'VAI') {
+    troph <- 'Fish'
+  } 
+}
+```
+
+```{r}
+df$Troph_func <- as.character(lapply(df$taxon_clean, function(x){Trophify(x)}))
+```
+
+Filtreurs passifs : Simulidés/hydropsyche Brouteurs : Baetidés / Heptagnenidés Déchiqueteurs : Gammaridés Prédateurs : Calopterigydés / Rhyacophilidés / Perlidés Poissons : Truite / Vairon
+
+```{r}
+baet <- Plotify_taxon('BAET')
+calop <- Plotify_taxon('CALOP')
+simu <- Plotify_taxon('SIMU')
+hepta <- Plotify_taxon('HEPTA')
+gam <- Plotify_taxon('GAM')
+hydrop <- Plotify_taxon('HYDROP')
+perl <- Plotify_taxon('PERL')
+rhyaco <- Plotify_taxon('RHYACO')
+vai <- Plotify_taxon('VAI')
+trf <- Plotify_taxon('TRF')
+```
+
+```{r}
+bois <- Plotify_type('bois')
+friche <- Plotify_type('friche')
+prairie <- Plotify_type('prairie')
+resineux <- Plotify_type('resineux')
+
+#creates a hull for isotopic area
+
+bois_hull <- bois+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+friche_hull <- friche+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+prairie_hull <- prairie+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+
+```
+
+Cadran isotopique en fonction de l'utilisation du sol
+
+```{r}
+ggarrange(bois, friche, prairie, resineux, 
+          labels = c("bois", "friche", "prairie", "resineux"),
+          ncol=2,
+          nrow = 2)
+```
+
+Idem avec aires isotopiques
+
+```{r}
+ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
+          labels = c("bois", "friche", "prairie", "resineux"),
+          ncol=2,
+          nrow = 2)
+```
+
+Cadran isotopique en fonction du taxon
+
+```{r}
+ggarrange(baet,calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf, 
+          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          ncol=4,
+          nrow = 3)
+```
+Aires pour chaque taxon en fonction du type d'utilisation du sol 
++ procédure pour permanova afin de savoir si les aires sont différentes 
+
+```{r}
+#Adonis ne veut pas de valeur négatives pour la permanova
+df$C_absolute <- as.numeric(lapply(df$d13C_norm, function(x){abs(x)}))
+```
+
+```{r}
+Test_hull_taxon <- function(taxon_name){
+
+  #Initializing vector with pairwise test p_values
+pairwise_p <- numeric()
+pairwise_r2 <- numeric()
+
+taxon_test <-df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute')]
+
+set.seed(46) #to ensure reproducibilty as we use permutations
+
+
+ado_all <-adonis2(taxon_test~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')])
+
+pairwise_p['all'] <- ado_all$`Pr(>F)`[1]
+pairwise_r2['all'] <- ado_all$R2[1]
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  taxon_bf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+    filter(type =='bois'|type=='friche') %>%
+    select(c('d15N_norm','C_absolute'))
+  ado_bf <-adonis2(taxon_bf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%filter(type =='bois'|type=='friche'))
+  pairwise_p['bois vs. friche'] <- ado_bf$`Pr(>F)`[1]
+  pairwise_r2['bois vs. friche'] <- ado_bf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+taxon_bp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='bois'|type=='prairie') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_bp <-adonis2(taxon_bp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='bois'|type=='prairie'))
+pairwise_p['bois vs. prairie'] <- ado_bp$`Pr(>F)`[1]
+pairwise_r2['bois vs. prairie'] <- ado_bp$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+taxon_pf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='prairie'|type=='friche') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_pf <-adonis2(taxon_pf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='prairie'|type=='friche'))
+pairwise_p['prairie vs. friche'] <- ado_pf$`Pr(>F)`[1]
+pairwise_r2['prairie vs. friche'] <- ado_pf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')){
+taxon_br <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='bois'|type=='resineux') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_br <-adonis2(taxon_br~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='bois'|type=='resineux'))
+pairwise_p['bois vs. resineux'] <- ado_br$`Pr(>F)`[1]
+pairwise_r2['bois vs. resineux'] <- ado_br$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+taxon_rf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='resineux'|type=='friche') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_rf <-adonis2(taxon_rf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='resineux'|type=='friche'))
+pairwise_p['resineux vs. friche'] <- ado_rf$`Pr(>F)`[1]
+pairwise_r2['resineux vs. friche'] <- ado_rf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+taxon_rp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='resineux'|type=='prairie') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_rp <-adonis2(taxon_rp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='resineux'|type=='prairie'))
+pairwise_p['resineux vs. prairie'] <- ado_rp$`Pr(>F)`[1]
+pairwise_r2['resineux vs. prairie'] <- ado_rp$R2[1]
+}
+
+adjusted_pairwise_p <- data.frame(t(data.frame(p.adjust(pairwise_p))))
+rownames(adjusted_pairwise_p) <- 'pairwise_p'
+data.frame(t(data.frame(pairwise_r2)))
+
+return(rbind(adjusted_pairwise_p,data.frame(t(data.frame(pairwise_r2)))))
+}
+
+```
+
+```{r}
+baet+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Baetidae ")
+```
+```{r}
+Test_hull_taxon('BAET')
+```
+
+```{r}
+calop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Calopterygidae ")
+```
+```{r}
+Test_hull_taxon('CALOP')
+```
+
+```{r}
+gam+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Gammaridae ")
+```
+```{r}
+Test_hull_taxon('GAM')
+```
+
+```{r}
+hepta+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Heptagenidae ")
+```
+```{r}
+Test_hull_taxon('HEPTA')
+```
+
+```{r}
+hydrop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Hydropsychidae ")
+```
+```{r}
+Test_hull_taxon('HYDROP')
+```
+
+```{r}
+perl+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Perlidae ")
+```
+```{r}
+Test_hull_taxon('PERL')
+```
+
+```{r}
+rhyaco+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Rhyacophilidae ")
+```
+```{r}
+Test_hull_taxon('RHYACO')
+```
+
+```{r}
+simu+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Simulidae ")
+```
+```{r}
+Test_hull_taxon('SIMU')
+```
+
+```{r}
+vai+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Phoxinus phoxinus (Common Minnow) ")
+```
+```{r}
+Test_hull_taxon('VAI')
+```
+
+```{r}
+trf+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Salmo trutta (Brown trout) ")
+```
+
+```{r}
+Test_hull_taxon('TRF')
+```
+
+```{r}
+df_p_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_p',],
+                          Test_hull_taxon('CALOP')['pairwise_p',],
+                          Test_hull_taxon('GAM')['pairwise_p',],
+                          Test_hull_taxon('HEPTA')['pairwise_p',],
+                          Test_hull_taxon('HYDROP')['pairwise_p',],
+                          Test_hull_taxon('PERL')['pairwise_p',],
+                          Test_hull_taxon('RHYACO')['pairwise_p',],
+                          Test_hull_taxon('SIMU')['pairwise_p',],
+                          Test_hull_taxon('VAI')['pairwise_p',],
+                          Test_hull_taxon('TRF')['pairwise_p',])
+rownames(df_p_values) <- c('BAET','CALOP','GAM','HEPTA','HYDROP','PERL','RHYACO','SIMU','VAI','TRF')
+
+df_r2_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_r2',],
+                          Test_hull_taxon('CALOP')['pairwise_r2',],
+                          Test_hull_taxon('GAM')['pairwise_r2',],
+                          Test_hull_taxon('HEPTA')['pairwise_r2',],
+                          Test_hull_taxon('HYDROP')['pairwise_r2',],
+                          Test_hull_taxon('PERL')['pairwise_r2',],
+                          Test_hull_taxon('RHYACO')['pairwise_r2',],
+                          Test_hull_taxon('SIMU')['pairwise_r2',],
+                          Test_hull_taxon('VAI')['pairwise_r2',],
+                          Test_hull_taxon('TRF')['pairwise_r2',])
+rownames(df_r2_values) <- c('BAET','CALOP','GAM','HEPTA','HYDROP','PERL','RHYACO','SIMU','VAI','TRF')
+
+df_r2_values
+df_p_values
+```
+
+
+
+regarder les stations pour voir s'il y a une explication dans les deux "branches"/tendances observées
+
+```{r}
+ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=station))+ggtitle("Isotopic frame for all taxa depending on the prairie station ")+xlab('δ13C (‰)')+ylab('δ15N (‰)')+xlim(xmin,xmax)+ylim(ymin,ymax)
+```
+```{r}
+baet_prairie <- Plotify_taxon_type('BAET','prairie')
+calop_prairie <- Plotify_taxon_type('CALOP','prairie')
+simu_prairie <- Plotify_taxon_type('SIMU','prairie')
+hepta_prairie <- Plotify_taxon_type('HEPTA','prairie')
+gam_prairie <- Plotify_taxon_type('GAM','prairie')
+hydrop_prairie <- Plotify_taxon_type('HYDROP','prairie')
+perl_prairie <- Plotify_taxon_type('PERL','prairie')
+rhyaco_prairie <- Plotify_taxon_type('RHYACO','prairie')
+vai_prairie <- Plotify_taxon_type('VAI','prairie')
+trf_prairie <- Plotify_taxon_type('TRF','prairie')
+```
+
+```{r}
+ggarrange(baet_prairie,calop_prairie,gam_prairie,hepta_prairie,hydrop_prairie,perl_prairie,rhyaco_prairie,simu_prairie,vai_prairie,trf_prairie, 
+          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          ncol=4,
+          nrow = 3)
+```
+
+
+```{r}
+bois_bc <- ggplot(df[df$type ==as.character('bois'),])+geom_boxplot(aes(taxon_clean,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Taxa')+ylab('δ13C (‰)')
+prairie_bc <- ggplot(df[df$type ==as.character('prairie'),])+geom_boxplot(aes(taxon_clean,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Taxa')+ylab('δ13C (‰)')
+friche_bc  <- ggplot(df[df$type ==as.character('friche'),])+geom_boxplot(aes(taxon_clean,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Taxa')+ylab('δ13C (‰)')
+resineux_bc <- ggplot(df[df$type ==as.character('resineux'),])+geom_boxplot(aes(taxon_clean,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Taxa')+ylab('δ13C (‰)')
+
+bois_bn <- ggplot(df[df$type ==as.character('bois'),])+geom_boxplot(aes(taxon_clean,d15N_norm))+ylim(ymin,ymax)+xlab('Taxa')+ylab('δ15N (‰)')
+prairie_bn <- ggplot(df[df$type ==as.character('prairie'),])+geom_boxplot(aes(taxon_clean,d15N_norm))+ylim(ymin,ymax)+xlab('Taxa')+ylab('δ15N (‰)')
+friche_bn  <- ggplot(df[df$type ==as.character('friche'),])+geom_boxplot(aes(taxon_clean,d15N_norm))+ylim(ymin,ymax)+xlab('Taxa')+ylab('δ15N (‰)')
+resineux_bn <- ggplot(df[df$type ==as.character('resineux'),])+geom_boxplot(aes(taxon_clean,d15N_norm))+ylim(ymin,ymax)+xlab('Taxa')+ylab('δ15N (‰)')
+```
+
+```{r}
+baet_box_carbon <- Boxplot_carbon_taxon('BAET')
+calop_box_carbon <- Boxplot_carbon_taxon('CALOP')
+gam_box_carbon <- Boxplot_carbon_taxon('GAM')
+hepta_box_carbon <- Boxplot_carbon_taxon('HEPTA')
+hydrop_box_carbon <- Boxplot_carbon_taxon('HYDROP')
+perl_box_carbon <- Boxplot_carbon_taxon('PERL')
+rhyaco_box_carbon <- Boxplot_carbon_taxon('RHYACO')
+simu_box_carbon <- Boxplot_carbon_taxon('SIMU')
+trf_box_carbon <- Boxplot_carbon_taxon('TRF')
+vai_box_carbon <- Boxplot_carbon_taxon('VAI')
+
+baet_box_nitrogen <- Boxplot_nitrogen_taxon('BAET')
+calop_box_nitrogen <- Boxplot_nitrogen_taxon('CALOP')
+gam_box_nitrogen <- Boxplot_nitrogen_taxon('GAM')
+hepta_box_nitrogen <- Boxplot_nitrogen_taxon('HEPTA')
+hydrop_box_nitrogen <- Boxplot_nitrogen_taxon('HYDROP')
+perl_box_nitrogen <- Boxplot_nitrogen_taxon('PERL')
+rhyaco_box_nitrogen <- Boxplot_nitrogen_taxon('RHYACO')
+simu_box_nitrogen <- Boxplot_nitrogen_taxon('SIMU')
+trf_box_nitrogen <- Boxplot_nitrogen_taxon('TRF')
+vai_box_nitrogen <- Boxplot_nitrogen_taxon('VAI')
+
+```
+
+```{r}
+ggarrange(baet_box_carbon,calop_box_carbon,gam_box_carbon,hepta_box_carbon,hydrop_box_carbon,perl_box_carbon,rhyaco_box_carbon,simu_box_carbon,vai_box_carbon,trf_box_carbon, 
+          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          ncol=4,
+          nrow = 3)
+```
+```{r}
+ggarrange(baet_box_nitrogen,calop_box_nitrogen,gam_box_nitrogen,hepta_box_nitrogen,hydrop_box_nitrogen,perl_box_nitrogen,rhyaco_box_nitrogen,simu_box_nitrogen,vai_box_nitrogen,trf_box_nitrogen, 
+          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          ncol=4,
+          nrow = 3)
+```
+
+```{r}
+ggarrange(bois_bc, friche_bc, prairie_bc, resineux_bc, 
+          labels = c("bois", "friche", "prairie", "resineux"),
+          ncol=2,
+          nrow = 2)
+```
+
+```{r}
+ggarrange(bois_bn, friche_bn, prairie_bn, resineux_bn, 
+          labels = c("bois", "friche", "prairie", "resineux"),
+          ncol=2,
+          nrow = 2)
+```
+
+```{r}
+ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=Troph_func))
+```
