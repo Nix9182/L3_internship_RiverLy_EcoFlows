@@ -15,12 +15,14 @@ library(stringr)
 library(ggpubr)
 library(ggforce)
 library(vegan)
+library(plyr)
 library(dplyr)
+library(RColorBrewer)
 ```
 
 ```{r}
 #setting the work direction
-setwd("C:\\Users\\cbodson\\Desktop\\Analyse_données")
+#setwd("C:\\Users\\cbodson\\Desktop\\Analyse_données")
 
 ```
 
@@ -53,8 +55,14 @@ ymax <- 11
 
 
 ```{r}
+#define common color palette for all taxon plots
+myColors <- c("#AF6158","#ffba08","#8DCB41","#608E5C","#18D2BC","#3185fc","#A95AF8","#46237a","#E87F99","#FF5B36")
+#add color-taxon consistency
+names(myColors) <- unique(df$taxon_clean)
+colScale <- scale_colour_manual(name = "Taxa",values = myColors)
+
 all <- ggplot(df)+geom_point(aes(d13C_norm,d15N_norm,
-                                 color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)
+                                 color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')+colScale
 all
 ```
 
@@ -65,13 +73,15 @@ Plotify_taxon <- function(taxon_name) {
 }
 
 Plotify_type <- function(type_land) {
-    plot <- ggplot(df[df$type ==as.character(type_land),])+geom_point(aes(d13C_norm,d15N_norm, color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+    plot <- ggplot(df[df$type ==as.character(type_land),])+geom_point(aes(d13C_norm,d15N_norm, color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')+colScale
 }
 
 Plotify_taxon_type <- function(taxon_name, type_land) {
     plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
 }
 
+
+#Functions to plot boxplots depending on carbon or nitrogen for each taxon with type of land use as categories
 Boxplot_carbon_taxon <- function(taxon_name) {
   plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Land Use')+ylab('δ13C (‰)')
 }
@@ -79,10 +89,11 @@ Boxplot_carbon_taxon <- function(taxon_name) {
 Boxplot_nitrogen_taxon <- function(taxon_name) {
   plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d15N_norm))+ylim(ymin,ymax)+xlab('Land Use')+ylab('δ15N (‰)')
 }
+
 #Function to add trophic role 
 Trophify <- function(taxon_name) {
   if (taxon_name == 'SIMU' | taxon_name == 'HYDROP') {
-    troph <- 'Filter'
+    troph <- 'Collector'
   } 
   else if (taxon_name == 'BAET' | taxon_name == 'HEPTA') {
     troph <- 'Grazer'
@@ -102,8 +113,6 @@ Trophify <- function(taxon_name) {
 ```{r}
 df$Troph_func <- as.character(lapply(df$taxon_clean, function(x){Trophify(x)}))
 ```
-
-Filtreurs passifs : Simulidés/hydropsyche Brouteurs : Baetidés / Heptagnenidés Déchiqueteurs : Gammaridés Prédateurs : Calopterigydés / Rhyacophilidés / Perlidés Poissons : Truite / Vairon
 
 ```{r}
 baet <- Plotify_taxon('BAET')
@@ -133,7 +142,7 @@ resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_cle
 
 ```
 
-Cadran isotopique en fonction de l'utilisation du sol
+Isotopic frame in function of land use, not the most judicious as we separate the factors we want to compare
 
 ```{r}
 ggarrange(bois, friche, prairie, resineux, 
@@ -142,7 +151,7 @@ ggarrange(bois, friche, prairie, resineux,
           nrow = 2)
 ```
 
-Idem avec aires isotopiques
+Same with isotopic areas
 
 ```{r}
 ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
@@ -151,7 +160,7 @@ ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull,
           nrow = 2)
 ```
 
-Cadran isotopique en fonction du taxon
+Isotopic frame by taxon
 
 ```{r}
 ggarrange(baet,calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf, 
@@ -159,18 +168,18 @@ ggarrange(baet,calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf,
           ncol=4,
           nrow = 3)
 ```
-Aires pour chaque taxon en fonction du type d'utilisation du sol 
-+ procédure pour permanova afin de savoir si les aires sont différentes 
+Areas for each taxon in function of land use
++ procedure for PERMANOVA to test wether clusters are different two by two
 
 ```{r}
-#Adonis ne veut pas de valeur négatives pour la permanova
+#Adonis doesn't want negative values for PERMANOVA
 df$C_absolute <- as.numeric(lapply(df$d13C_norm, function(x){abs(x)}))
 ```
 
 ```{r}
 Test_hull_taxon <- function(taxon_name){
 
-  #Initializing vector with pairwise test p_values
+#Initializing vector with pairwise test p_values
 pairwise_p <- numeric()
 pairwise_r2 <- numeric()
 
@@ -181,11 +190,12 @@ set.seed(46) #to ensure reproducibilty as we use permutations
 
 ado_all <-adonis2(taxon_test~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')])
 
+#Takes p-value and R2 results
 pairwise_p['all'] <- ado_all$`Pr(>F)`[1]
 pairwise_r2['all'] <- ado_all$R2[1]
 
 if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
-  taxon_bf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  taxon_bf <- df[df$taxon_clean== as.character(taxon_name),] %>%  #clean with only land uses of interest
     filter(type =='bois'|type=='friche') %>%
     select(c('d15N_norm','C_absolute'))
   ado_bf <-adonis2(taxon_bf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%filter(type =='bois'|type=='friche'))
@@ -243,6 +253,7 @@ pairwise_p['resineux vs. prairie'] <- ado_rp$`Pr(>F)`[1]
 pairwise_r2['resineux vs. prairie'] <- ado_rp$R2[1]
 }
 
+#As we increase the number of comparisons, we also increase the risk of rejecting the false hypothesis so we need to adjust p-values
 adjusted_pairwise_p <- data.frame(t(data.frame(p.adjust(pairwise_p))))
 rownames(adjusted_pairwise_p) <- 'pairwise_p'
 data.frame(t(data.frame(pairwise_r2)))
@@ -324,6 +335,7 @@ Test_hull_taxon('TRF')
 ```
 
 ```{r}
+#Gathering all data into 2 dataframes, p-values indicate significance of the difference observed whether it's small or large, and R2 indicate the proportion of variation explained by the model (here by the type of land use)
 df_p_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_p',],
                           Test_hull_taxon('CALOP')['pairwise_p',],
                           Test_hull_taxon('GAM')['pairwise_p',],
@@ -354,11 +366,13 @@ df_p_values
 
 
 
-regarder les stations pour voir s'il y a une explication dans les deux "branches"/tendances observées
+Look further in detail at stations to identify a possible explanation for the 2 "branches" with large difference δ15N observed for prairies across the taxa 
 
 ```{r}
 ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=station))+ggtitle("Isotopic frame for all taxa depending on the prairie station ")+xlab('δ13C (‰)')+ylab('δ15N (‰)')+xlim(xmin,xmax)+ylim(ymin,ymax)
 ```
+Same but taxon by taxon
+
 ```{r}
 baet_prairie <- Plotify_taxon_type('BAET','prairie')
 calop_prairie <- Plotify_taxon_type('CALOP','prairie')
@@ -378,7 +392,7 @@ ggarrange(baet_prairie,calop_prairie,gam_prairie,hepta_prairie,hydrop_prairie,pe
           ncol=4,
           nrow = 3)
 ```
-
+Boxplots
 
 ```{r}
 bois_bc <- ggplot(df[df$type ==as.character('bois'),])+geom_boxplot(aes(taxon_clean,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Taxa')+ylab('δ13C (‰)')
@@ -417,19 +431,24 @@ vai_box_nitrogen <- Boxplot_nitrogen_taxon('VAI')
 
 ```
 
+
+Boxplot by taxon for Carbon
 ```{r}
+
 ggarrange(baet_box_carbon,calop_box_carbon,gam_box_carbon,hepta_box_carbon,hydrop_box_carbon,perl_box_carbon,rhyaco_box_carbon,simu_box_carbon,vai_box_carbon,trf_box_carbon, 
           labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
           ncol=4,
           nrow = 3)
 ```
+
+Boxplot by taxon for Nitrogen
 ```{r}
 ggarrange(baet_box_nitrogen,calop_box_nitrogen,gam_box_nitrogen,hepta_box_nitrogen,hydrop_box_nitrogen,perl_box_nitrogen,rhyaco_box_nitrogen,simu_box_nitrogen,vai_box_nitrogen,trf_box_nitrogen, 
           labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
           ncol=4,
           nrow = 3)
 ```
-
+Same by lund use type, but not the most judicious
 ```{r}
 ggarrange(bois_bc, friche_bc, prairie_bc, resineux_bc, 
           labels = c("bois", "friche", "prairie", "resineux"),
@@ -443,7 +462,7 @@ ggarrange(bois_bn, friche_bn, prairie_bn, resineux_bn,
           ncol=2,
           nrow = 2)
 ```
-
+Looking further into impact feeding behavior
 ```{r}
 ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=Troph_func))
 ```
