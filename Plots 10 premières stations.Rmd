@@ -441,6 +441,306 @@ ggarrange(baet_box_carbon,calop_box_carbon,gam_box_carbon,hepta_box_carbon,hydro
           nrow = 3)
 ```
 
+```{r}
+#create function with Welch Two sample t-tests significant results as output 
+
+t_test_type_alt <- function(taxon_name,type1,type2,alternative_asked){
+  test <- t.test(df[df$taxon_clean == as.character(taxon_name),]%>% 
+         filter(type ==as.character(type1)) %>%
+         select('d13C_norm'), 
+      y=df[df$taxon_clean == as.character(taxon_name),]%>% 
+         filter(type ==as.character(type2)) %>%
+         select('d13C_norm'), 
+      alternative=as.character(alternative_asked))
+  return(test)
+}
+```
+
+
+
+```{r}
+#test of function without for loop
+"c_mean_t_test2 <- function(taxon_name) {
+#create empty df
+c_mean_colnames <- c('different','greater','less')
+c_mean_rownames <- c(colnames(df_p_values)[c(2:length(df_p_values))])
+c_mean_df <- data.frame(matrix(nrow=length(c_mean_rownames),ncol=length(c_mean_colnames)))
+colnames(c_mean_df) <- c_mean_colnames
+rownames(c_mean_df) <- c_mean_rownames
+
+#significance threshold
+thr <- 0.05
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_bf_two_sided <- t_test_type_alt(taxon_name,'bois','friche','two.sided')
+  test_bf_greater <- t_test_type_alt(taxon_name,'bois','friche','greater')
+  test_bf_less <- t_test_type_alt(taxon_name,'bois','friche','less')
+  
+  if (test_bf_two_sided$p.value < thr){
+    c_mean_df[1,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[1,'different'] <- FALSE
+  }
+  
+  if (test_bf_greater$p.value < thr){
+    c_mean_df[1,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[1,'greater'] <- FALSE
+  }
+
+  if (test_bf_less$p.value < thr){
+    c_mean_df[1,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[1,'less'] <- FALSE
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+  test_bp_two_sided <- t_test_type_alt(taxon_name,'bois','prairie','two.sided')
+  test_bp_greater <- t_test_type_alt(taxon_name,'bois','prairie','greater')
+  test_bp_less <- t_test_type_alt(taxon_name,'bois','prairie','less')
+  
+  if (test_bp_two_sided$p.value < thr){
+    c_mean_df[2,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[2,'different'] <- FALSE
+  }
+  
+  if (test_bp_greater$p.value < thr){
+    c_mean_df[2,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[2,'greater'] <- FALSE
+  }
+
+  if (test_bp_less$p.value < thr){
+    c_mean_df[2,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[2,'less'] <- FALSE
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_pf_two_sided <- t_test_type_alt(taxon_name,'prairie','friche','two.sided')
+  test_pf_greater <- t_test_type_alt(taxon_name,'prairie','friche','greater')
+  test_pf_less <- t_test_type_alt(taxon_name,'prairie','friche','less')
+  
+  if (test_pf_two_sided$p.value < thr){
+    c_mean_df[3,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[3,'different'] <- FALSE
+  }
+  
+  if (test_pf_greater$p.value < thr){
+    c_mean_df[3,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[3,'greater'] <- FALSE
+  }
+
+  if (test_pf_less$p.value < thr){
+    c_mean_df[3,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[3,'less'] <- FALSE
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')){
+  test_br_two_sided <- t_test_type_alt(taxon_name,'bois','resineux','two.sided')
+  test_br_greater <- t_test_type_alt(taxon_name,'bois','resineux','greater')
+  test_br_less <- t_test_type_alt(taxon_name,'bois','resineux','less')
+  
+  if (test_br_two_sided$p.value < thr){
+    c_mean_df[4,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[4,'different'] <- FALSE
+  }
+  
+  if (test_br_greater$p.value < thr){
+    c_mean_df[4,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[4,'greater'] <- FALSE
+  }
+
+  if (test_br_less$p.value < thr){
+    c_mean_df[4,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[4,'less'] <- FALSE
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_rf_two_sided <- t_test_type_alt(taxon_name,'resineux','friche','two.sided')
+  test_rf_greater <- t_test_type_alt(taxon_name,'resineux','friche','greater')
+  test_rf_less <- t_test_type_alt(taxon_name,'resineux','friche','less')
+  
+  if (test_rf_two_sided$p.value < thr){
+    c_mean_df[5,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[5,'different'] <- FALSE
+  }
+  
+  if (test_rf_greater$p.value < thr){
+    c_mean_df[5,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[5,'greater'] <- FALSE
+  }
+
+  if (test_rf_less$p.value < thr){
+    c_mean_df[5,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[5,'less'] <- FALSE
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+  test_rp_two_sided <- t_test_type_alt(taxon_name,'resineux','prairie','two.sided')
+  test_rp_greater <- t_test_type_alt(taxon_name,'resineux','prairie','greater')
+  test_rp_less <- t_test_type_alt(taxon_name,'resineux','prairie','less')
+  
+  if (test_rp_two_sided$p.value < thr){
+    c_mean_df[6,'different'] <- TRUE
+  }
+  else{
+    c_mean_df[6,'different'] <- FALSE
+  }
+  
+  if (test_rp_greater$p.value < thr){
+    c_mean_df[6,'greater'] <- TRUE
+  }
+  else{
+    c_mean_df[6,'greater'] <- FALSE
+  }
+
+  if (test_rp_less$p.value < thr){
+    c_mean_df[6,'less'] <- TRUE
+  }
+  else{
+    c_mean_df[6,'less'] <- FALSE
+  }
+return(c_mean_df)
+}
+}"
+```
+
+```{r}
+c_mean_t_test <- function(taxon_name) {
+#create empty df
+c_mean_colnames <- c('different','greater','less')
+c_mean_rownames <- c(colnames(df_p_values)[c(2:length(df_p_values))])
+c_mean_df <- data.frame(matrix(nrow=length(c_mean_rownames),ncol=length(c_mean_colnames)))
+colnames(c_mean_df) <- c_mean_colnames
+rownames(c_mean_df) <- c_mean_rownames
+
+#significance threshold
+thr <- 0.05
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_two_sided <- t_test_type_alt(taxon_name,'bois','friche','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'bois','friche','greater')
+  test_less <- t_test_type_alt(taxon_name,'bois','friche','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[1,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[1,match(i,test_list)] <- FALSE
+    }
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+  test_two_sided <- t_test_type_alt(taxon_name,'bois','prairie','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'bois','prairie','greater')
+  test_less <- t_test_type_alt(taxon_name,'bois','prairie','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[2,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[2,match(i,test_list)] <- FALSE
+    }
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_two_sided <- t_test_type_alt(taxon_name,'prairie','friche','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'prairie','friche','greater')
+  test_less <- t_test_type_alt(taxon_name,'prairie','friche','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[3,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[3,match(i,test_list)] <- FALSE
+    }
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')){
+  test_two_sided <- t_test_type_alt(taxon_name,'bois','resineux','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'bois','resineux','greater')
+  test_less <- t_test_type_alt(taxon_name,'bois','resineux','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[4,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[4,match(i,test_list)] <- FALSE
+    }
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  test_two_sided <- t_test_type_alt(taxon_name,'resineux','friche','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'resineux','friche','greater')
+  test_less <- t_test_type_alt(taxon_name,'resineux','friche','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[5,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[5,match(i,test_list)] <- FALSE
+    }
+  }
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+  test_two_sided <- t_test_type_alt(taxon_name,'resineux','prairie','two.sided')
+  test_greater <- t_test_type_alt(taxon_name,'resineux','prairie','greater')
+  test_less <- t_test_type_alt(taxon_name,'resineux','prairie','less')
+  test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+  for (i in test_list) {
+    if (i < thr){
+    c_mean_df[6,match(i,test_list)] <- TRUE
+    }
+    else{
+    c_mean_df[6,match(i,test_list)] <- FALSE
+    }
+  }
+}
+return(c_mean_df)
+}
+```
+
 Boxplot by taxon for Nitrogen
 ```{r}
 ggarrange(baet_box_nitrogen,calop_box_nitrogen,gam_box_nitrogen,hepta_box_nitrogen,hydrop_box_nitrogen,perl_box_nitrogen,rhyaco_box_nitrogen,simu_box_nitrogen,vai_box_nitrogen,trf_box_nitrogen, 
