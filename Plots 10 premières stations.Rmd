@@ -18,12 +18,7 @@ library(vegan)
 library(plyr)
 library(dplyr)
 library(RColorBrewer)
-```
-
-```{r}
-#setting the work direction
-#setwd("C:\\Users\\cbodson\\Desktop\\Analyse_données")
-
+library(xlsx)
 ```
 
 ```{r}
@@ -59,35 +54,35 @@ ymax <- 11
 myColors <- c("#AF6158","#ffba08","#8DCB41","#608E5C","#18D2BC","#3185fc","#A95AF8","#46237a","#E87F99","#FF5B36")
 #add color-taxon consistency
 names(myColors) <- unique(df$taxon_clean)
-colScale <- scale_colour_manual(name = "Taxa",values = myColors)
+colScale <- scale_colour_manual(name = "Taxa",values = myColors, labels= c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus'))
 
-all <- ggplot(df)+geom_point(aes(d13C_norm,d15N_norm,
-                                 color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')+colScale
+#define common color palette for all taxon plots
+all <- ggplot(df)+geom_point(aes(d13C_norm,d15N_norm,color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+colScale+theme_bw()
 all
 ```
 
 ```{r}
 #Creating functions that take taxon name or land type and plot the scatterplot of the desired category
 Plotify_taxon <- function(taxon_name) {
-    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_point(aes(d13C_norm,d15N_norm, color=type))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_point(aes(d13C_norm,d15N_norm, color=type))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+theme_bw()+theme(plot.margin=unit(c(1,0.5,0,0.5),"cm"))
 }
 
 Plotify_type <- function(type_land) {
-    plot <- ggplot(df[df$type ==as.character(type_land),])+geom_point(aes(d13C_norm,d15N_norm, color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')+colScale
+    plot <- ggplot(df[df$type ==as.character(type_land),])+geom_point(aes(d13C_norm,d15N_norm, color=taxon_clean))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+colScale+theme_bw()+theme(plot.margin=unit(c(1,0.5,-0.5,0.5),"cm"))
 }
 
 Plotify_taxon_type <- function(taxon_name, type_land) {
-    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+xlab('δ13C (‰)')+ylab('δ15N (‰)')
+    plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+theme_bw()+theme(plot.margin=unit(c(1,0.5,0,0.5),"cm"))
 }
 
 
 #Functions to plot boxplots depending on carbon or nitrogen for each taxon with type of land use as categories
 Boxplot_carbon_taxon <- function(taxon_name) {
-  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Land Use')+ylab('δ13C (‰)')
+  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d13C_norm))+coord_flip()+ylim(xmin,xmax)+xlab('Land Use')+ylab('δ13C (‰)')+theme_bw()
 }
 
 Boxplot_nitrogen_taxon <- function(taxon_name) {
-  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d15N_norm))+ylim(ymin,ymax)+xlab('Land Use')+ylab('δ15N (‰)')
+  plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name),])+geom_boxplot(aes(type,d15N_norm))+ylim(ymin,ymax)+xlab('Land Use')+ylab('δ15N (‰)')+theme_bw()
 }
 
 #Function to add trophic role 
@@ -115,12 +110,13 @@ df$Troph_func <- as.character(lapply(df$taxon_clean, function(x){Trophify(x)}))
 ```
 
 ```{r}
+
 baet <- Plotify_taxon('BAET')
 calop <- Plotify_taxon('CALOP')
 simu <- Plotify_taxon('SIMU')
 hepta <- Plotify_taxon('HEPTA')
 gam <- Plotify_taxon('GAM')
-hydrop <- Plotify_taxon('HYDROP')
+hydrop <- Plotify_taxon('HYDROP')+scale_colour_manual(values=c("#F8766D","#00BFC4","#C77CFF"))
 perl <- Plotify_taxon('PERL')
 rhyaco <- Plotify_taxon('RHYACO')
 vai <- Plotify_taxon('VAI')
@@ -128,48 +124,68 @@ trf <- Plotify_taxon('TRF')
 ```
 
 ```{r}
-bois <- Plotify_type('bois')
-friche <- Plotify_type('friche')
-prairie <- Plotify_type('prairie')
-resineux <- Plotify_type('resineux')
-
-#creates a hull for isotopic area
-
-bois_hull <- bois+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-friche_hull <- friche+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-prairie_hull <- prairie+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# bois <- Plotify_type('bois')
+# friche <- Plotify_type('friche')
+# prairie <- Plotify_type('prairie')
+# resineux <- Plotify_type('resineux')
+# 
+# #creates a hull for isotopic area
+# 
+# bois_hull <- bois+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# friche_hull <- friche+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# prairie_hull <- prairie+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
 
 ```
 
 Isotopic frame in function of land use, not the most judicious as we separate the factors we want to compare
 
 ```{r}
-ggarrange(bois, friche, prairie, resineux, 
-          labels = c("bois", "friche", "prairie", "resineux"),
-          ncol=2,
-          nrow = 2)
+# #png("C:/Users/cbodson/Desktop/test.png",
+# #    width=640, height=500)
+# ggarrange(bois, friche, prairie, resineux, 
+#           labels = c("bois", "friche", "prairie", "resineux"),
+#           label.x = 0,
+#           label.y = 1,
+#           ncol=2,
+#           nrow = 2,
+#           common.legend=TRUE,
+#           legend='right')
+# #dev.off()
 ```
 
 Same with isotopic areas
 
 ```{r}
-ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
-          labels = c("bois", "friche", "prairie", "resineux"),
-          ncol=2,
-          nrow = 2)
+# png("C:/Users/cbodson/Desktop/test.png",
+#     width=640, height=500)
+# ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
+#           labels = c("bois", "friche", "prairie", "resineux"),
+#           label.x = 0,
+#           label.y = 1,
+#           ncol=2,
+#           nrow = 2,
+#           common.legend=TRUE,
+#           legend='right')
+# dev.off()
 ```
 
 Isotopic frame by taxon
 
 ```{r}
-ggarrange(baet,calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf, 
-          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+#ggarange takes the legend of the first plot for common legends
+#png("C:/Users/cbodson/Desktop/Isotopic_Frame_by_taxon.png", width=750, height=500)
+ggarrange(baet+scale_color_manual(name='Land Use', values=c("#F8766D","#7CAE00","#00BFC4","#C77CFF"),labels=c("Woods","Wastelands","Prairies","Softwoods")),calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf, 
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
           ncol=4,
-          nrow = 3)
+          nrow = 3,
+          label.x = 0.1,
+          common.legend=TRUE,
+          legend="right")
+#dev.off()
 ```
 Areas for each taxon in function of land use
-+ procedure for PERMANOVA to test wether clusters are different two by two
++ procedure for PERMANOVA to test whether clusters are different two by two
 
 ```{r}
 #Adonis doesn't want negative values for PERMANOVA
@@ -264,75 +280,100 @@ return(rbind(adjusted_pairwise_p,data.frame(t(data.frame(pairwise_r2)))))
 ```
 
 ```{r}
-baet+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Baetidae ")
+baet_hull<- baet+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+baet_hull
 ```
+
 ```{r}
 Test_hull_taxon('BAET')
 ```
 
 ```{r}
-calop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Calopterygidae ")
+calop_hull <- calop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('CALOP')
 ```
 
 ```{r}
-gam+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Gammaridae ")
+gam_hull<- gam+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('GAM')
 ```
 
 ```{r}
-hepta+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Heptagenidae ")
+hepta_hull <- hepta+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('HEPTA')
 ```
 
 ```{r}
-hydrop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Hydropsychidae ")
+#!!! ADJUST COLORS ON INKSCAPE
+hydrop_hull <- hydrop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+hydrop_hull
 ```
+
 ```{r}
 Test_hull_taxon('HYDROP')
 ```
 
 ```{r}
-perl+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Perlidae ")
+perl_hull <- perl+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('PERL')
 ```
 
 ```{r}
-rhyaco+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Rhyacophilidae ")
+rhyaco_hull <- rhyaco+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('RHYACO')
 ```
 
 ```{r}
-simu+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Simulidae ")
+simu_hull <- simu+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('SIMU')
 ```
 
 ```{r}
-vai+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Phoxinus phoxinus (Common Minnow) ")
+vai_hull <- vai+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 ```{r}
 Test_hull_taxon('VAI')
 ```
 
 ```{r}
-trf+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+ggtitle("Isotopic areas concerning Salmo trutta (Brown trout) ")
+trf_hull <- trf+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
 ```
+
 
 ```{r}
 Test_hull_taxon('TRF')
 ```
+
+```{r}
+#!!! Correct legend and colors in INKSCAPE
+ggarrange(baet_hull,calop_hull,gam_hull,hepta_hull,hydrop_hull,perl_hull,rhyaco_hull,simu_hull,vai_hull,trf_hull, 
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
+          ncol=4,
+          nrow = 3,
+          label.x = 0.1,
+          common.legend=TRUE,
+          legend="right")
+```
+
 
 ```{r}
 #Gathering all data into 2 dataframes, p-values indicate significance of the difference observed whether it's small or large, and R2 indicate the proportion of variation explained by the model (here by the type of land use)
@@ -346,7 +387,8 @@ df_p_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_p',],
                           Test_hull_taxon('SIMU')['pairwise_p',],
                           Test_hull_taxon('VAI')['pairwise_p',],
                           Test_hull_taxon('TRF')['pairwise_p',])
-rownames(df_p_values) <- c('BAET','CALOP','GAM','HEPTA','HYDROP','PERL','RHYACO','SIMU','VAI','TRF')
+rownames(df_p_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_p_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
 
 df_r2_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_r2',],
                           Test_hull_taxon('CALOP')['pairwise_r2',],
@@ -358,39 +400,54 @@ df_r2_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_r2',],
                           Test_hull_taxon('SIMU')['pairwise_r2',],
                           Test_hull_taxon('VAI')['pairwise_r2',],
                           Test_hull_taxon('TRF')['pairwise_r2',])
-rownames(df_r2_values) <- c('BAET','CALOP','GAM','HEPTA','HYDROP','PERL','RHYACO','SIMU','VAI','TRF')
+rownames(df_r2_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_r2_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
 
-df_r2_values
+df_r2_values <- df_r2_values%>%  mutate_if(is.numeric, round, digits = 3)
 df_p_values
 ```
+```{r}
+mask_df <- data.frame(lapply(df_p_values, function(x){x<0.05}))
+df_r2_signi <- data.frame(mapply(function(x, y) ifelse(y, x, "X"), df_r2_values, mask_df))
+rownames(df_r2_signi) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_r2_signi) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
+df_r2_signi
+```
 
+```{r}
+#setting the work direction
+setwd("C:\\Users\\cbodson\\Desktop")
+write.xlsx(df_r2_signi, "Areas_r2_significant.xlsx")
+```
 
 
 Look further in detail at stations to identify a possible explanation for the 2 "branches" with large difference δ15N observed for prairies across the taxa 
 
 ```{r}
-ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=station))+ggtitle("Isotopic frame for all taxa depending on the prairie station ")+xlab('δ13C (‰)')+ylab('δ15N (‰)')+xlim(xmin,xmax)+ylim(ymin,ymax)
+ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlab('δ13C (‰)')+ylab('δ15N (‰)')+xlim(xmin,xmax)+ylim(ymin,ymax)+theme_bw()
 ```
 Same but taxon by taxon
 
 ```{r}
-baet_prairie <- Plotify_taxon_type('BAET','prairie')
-calop_prairie <- Plotify_taxon_type('CALOP','prairie')
-simu_prairie <- Plotify_taxon_type('SIMU','prairie')
-hepta_prairie <- Plotify_taxon_type('HEPTA','prairie')
-gam_prairie <- Plotify_taxon_type('GAM','prairie')
-hydrop_prairie <- Plotify_taxon_type('HYDROP','prairie')
-perl_prairie <- Plotify_taxon_type('PERL','prairie')
-rhyaco_prairie <- Plotify_taxon_type('RHYACO','prairie')
-vai_prairie <- Plotify_taxon_type('VAI','prairie')
-trf_prairie <- Plotify_taxon_type('TRF','prairie')
+baet_prairie <- Plotify_taxon_type('BAET','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+calop_prairie <- Plotify_taxon_type('CALOP','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+simu_prairie <- Plotify_taxon_type('SIMU','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+hepta_prairie <- Plotify_taxon_type('HEPTA','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+gam_prairie <- Plotify_taxon_type('GAM','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+hydrop_prairie <- Plotify_taxon_type('HYDROP','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
+perl_prairie <- Plotify_taxon_type('PERL','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a",  "#6a4c93"))
+rhyaco_prairie <- Plotify_taxon_type('RHYACO','prairie')+scale_colour_manual(values=c("#ff595e", "#8ac926", "#1982c4", "#6a4c93"))
+vai_prairie <- Plotify_taxon_type('VAI','prairie')+scale_colour_manual(values=c("#ffca3a", "#6a4c93"))
+trf_prairie <- Plotify_taxon_type('TRF','prairie')+scale_colour_manual(values=c("#ff595e", "#1982c4"))
 ```
 
 ```{r}
 ggarrange(baet_prairie,calop_prairie,gam_prairie,hepta_prairie,hydrop_prairie,perl_prairie,rhyaco_prairie,simu_prairie,vai_prairie,trf_prairie, 
-          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
           ncol=4,
-          nrow = 3)
+          nrow = 3,
+          common.legend=TRUE,
+          legend="right")
 ```
 Boxplots
 
@@ -436,7 +493,7 @@ Boxplot by taxon for Carbon
 ```{r}
 
 ggarrange(baet_box_carbon,calop_box_carbon,gam_box_carbon,hepta_box_carbon,hydrop_box_carbon,perl_box_carbon,rhyaco_box_carbon,simu_box_carbon,vai_box_carbon,trf_box_carbon, 
-          labels = c("baet","calop","gam","hepta","hydrop","perl","rhyaco","simu","vai","trf"),
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
           ncol=4,
           nrow = 3)
 ```
