@@ -75,6 +75,9 @@ Plotify_taxon_type <- function(taxon_name, type_land) {
     plot <- ggplot(df[df$taxon_clean ==as.character(taxon_name) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+theme_bw()+theme(plot.margin=unit(c(1,0.5,0,0.5),"cm"))
 }
 
+Plotify_troph_type <- function(troph, type_land) {
+    plot <- ggplot(df[df$troph_func ==as.character(troph) & df$type ==as.character(type_land) ,])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+theme_bw()+theme(plot.margin=unit(c(1,0.5,0,0.5),"cm"))
+}
 
 #Functions to plot boxplots depending on carbon or nitrogen for each taxon with type of land use as categories
 Boxplot_carbon_taxon <- function(taxon_name) {
@@ -103,12 +106,15 @@ Trophify <- function(taxon_name) {
     troph <- 'Fish'
   } 
 }
+
+df$troph_func <- as.character(lapply(df$taxon_clean, function(x){Trophify(x)}))
+
+Plotify_troph <- function(troph){
+  plot <- ggplot(df[df$troph_func ==as.character(troph),])+geom_point(aes(d13C_norm,d15N_norm, color=type))+xlim(xmin,xmax)+ylim(ymin,ymax)+labs(x = 'δ13C (‰)', y = 'δ15N (‰)')+theme_bw()+theme(plot.margin=unit(c(1,0.5,0,0.5),"cm"))
+}
 ```
 
-```{r}
-df$Troph_func <- as.character(lapply(df$taxon_clean, function(x){Trophify(x)}))
-```
-
+Isotopic frame by taxon
 ```{r}
 
 baet <- Plotify_taxon('BAET')
@@ -124,55 +130,6 @@ trf <- Plotify_taxon('TRF')
 ```
 
 ```{r}
-# bois <- Plotify_type('bois')
-# friche <- Plotify_type('friche')
-# prairie <- Plotify_type('prairie')
-# resineux <- Plotify_type('resineux')
-# 
-# #creates a hull for isotopic area
-# 
-# bois_hull <- bois+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-# friche_hull <- friche+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-# prairie_hull <- prairie+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-# resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
-
-```
-
-Isotopic frame in function of land use, not the most judicious as we separate the factors we want to compare
-
-```{r}
-# #png("C:/Users/cbodson/Desktop/test.png",
-# #    width=640, height=500)
-# ggarrange(bois, friche, prairie, resineux, 
-#           labels = c("bois", "friche", "prairie", "resineux"),
-#           label.x = 0,
-#           label.y = 1,
-#           ncol=2,
-#           nrow = 2,
-#           common.legend=TRUE,
-#           legend='right')
-# #dev.off()
-```
-
-Same with isotopic areas
-
-```{r}
-# png("C:/Users/cbodson/Desktop/test.png",
-#     width=640, height=500)
-# ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
-#           labels = c("bois", "friche", "prairie", "resineux"),
-#           label.x = 0,
-#           label.y = 1,
-#           ncol=2,
-#           nrow = 2,
-#           common.legend=TRUE,
-#           legend='right')
-# dev.off()
-```
-
-Isotopic frame by taxon
-
-```{r}
 #ggarange takes the legend of the first plot for common legends
 #png("C:/Users/cbodson/Desktop/Isotopic_Frame_by_taxon.png", width=750, height=500)
 ggarrange(baet+scale_color_manual(name='Land Use', values=c("#F8766D","#7CAE00","#00BFC4","#C77CFF"),labels=c("Woods","Wastelands","Prairies","Softwoods")),calop,gam,hepta,hydrop,perl,rhyaco,simu,vai,trf, 
@@ -184,86 +141,107 @@ ggarrange(baet+scale_color_manual(name='Land Use', values=c("#F8766D","#7CAE00",
           legend="right")
 #dev.off()
 ```
-Areas for each taxon in function of land use
-+ procedure for PERMANOVA to test whether clusters are different two by two
 
+Isotopic frame by feeding behavior
+```{r}
+collector <- Plotify_troph('Collector')
+grazer <- Plotify_troph('Grazer')
+shredder <- Plotify_troph('Shredder')
+predator <- Plotify_troph("Predator")
+fish <- Plotify_troph("Fish")
+```
+
+```{r}
+#ggarange takes the legend of the first plot for common legends
+#png("C:/Users/cbodson/Desktop/Isotopic_Frame_by_taxon.png", width=750, height=500)
+ggarrange(collector+scale_color_manual(name='Land Use',values=c("#F8766D","#7CAE00","#00BFC4","#C77CFF"), labels=c("Woods","Wastelands","Prairies","Softwoods")),grazer,shredder,predator,fish, 
+          labels = c('A','B','C','D','E'),
+          ncol=3,
+          nrow = 2,
+          label.x = 0.1,
+          common.legend=TRUE,
+          legend="right")
+#dev.off()
+```
+Areas for each feeding behavior in function of land use
++ procedure for PERMANOVA to test whether clusters are different two by two 
 ```{r}
 #Adonis doesn't want negative values for PERMANOVA
 df$C_absolute <- as.numeric(lapply(df$d13C_norm, function(x){abs(x)}))
 ```
 
 ```{r}
-Test_hull_taxon <- function(taxon_name){
+Test_hull_troph <- function(troph){
 
 #Initializing vector with pairwise test p_values
 pairwise_p <- numeric()
 pairwise_r2 <- numeric()
 
-taxon_test <-df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute')]
+troph_test <-df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute')]
 
 set.seed(46) #to ensure reproducibilty as we use permutations
 
 
-ado_all <-adonis2(taxon_test~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')])
+ado_all <-adonis2(troph_test~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')])
 
 #Takes p-value and R2 results
 pairwise_p['all'] <- ado_all$`Pr(>F)`[1]
 pairwise_r2['all'] <- ado_all$R2[1]
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
-  taxon_bf <- df[df$taxon_clean== as.character(taxon_name),] %>%  #clean with only land uses of interest
+if (any(df[df$troph_func== as.character(troph),]$type == 'bois')& any(df[df$troph_func== as.character(troph),]$type == 'friche')){
+  taxon_bf <- df[df$troph_func== as.character(troph),] %>%  #clean with only land uses of interest
     filter(type =='bois'|type=='friche') %>%
     select(c('d15N_norm','C_absolute'))
-  ado_bf <-adonis2(taxon_bf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%filter(type =='bois'|type=='friche'))
+  ado_bf <-adonis2(taxon_bf~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%filter(type =='bois'|type=='friche'))
   pairwise_p['bois vs. friche'] <- ado_bf$`Pr(>F)`[1]
   pairwise_r2['bois vs. friche'] <- ado_bf$R2[1]
 }
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
-taxon_bp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+if (any(df[df$troph_func== as.character(troph),]$type == 'bois')& any(df[df$troph_func== as.character(troph),]$type == 'prairie')){
+taxon_bp <- df[df$troph_func== as.character(troph),] %>%
   filter(type =='bois'|type=='prairie') %>%
   select(c('d15N_norm','C_absolute'))
-ado_bp <-adonis2(taxon_bp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+ado_bp <-adonis2(taxon_bp~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%
   filter(type =='bois'|type=='prairie'))
 pairwise_p['bois vs. prairie'] <- ado_bp$`Pr(>F)`[1]
 pairwise_r2['bois vs. prairie'] <- ado_bp$R2[1]
 }
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
-taxon_pf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+if (any(df[df$troph_func== as.character(troph),]$type == 'prairie')& any(df[df$troph_func== as.character(troph),]$type == 'friche')){
+taxon_pf <- df[df$troph_func== as.character(troph),] %>%
   filter(type =='prairie'|type=='friche') %>%
   select(c('d15N_norm','C_absolute'))
-ado_pf <-adonis2(taxon_pf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+ado_pf <-adonis2(taxon_pf~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%
   filter(type =='prairie'|type=='friche'))
 pairwise_p['prairie vs. friche'] <- ado_pf$`Pr(>F)`[1]
 pairwise_r2['prairie vs. friche'] <- ado_pf$R2[1]
 }
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')){
-taxon_br <- df[df$taxon_clean== as.character(taxon_name),] %>%
+if (any(df[df$troph_func== as.character(troph),]$type == 'bois')& any(df[df$troph_func== as.character(troph),]$type == 'resineux')){
+taxon_br <- df[df$troph_func== as.character(troph),] %>%
   filter(type =='bois'|type=='resineux') %>%
   select(c('d15N_norm','C_absolute'))
-ado_br <-adonis2(taxon_br~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+ado_br <-adonis2(taxon_br~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%
   filter(type =='bois'|type=='resineux'))
 pairwise_p['bois vs. resineux'] <- ado_br$`Pr(>F)`[1]
 pairwise_r2['bois vs. resineux'] <- ado_br$R2[1]
 }
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
-taxon_rf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+if (any(df[df$troph_func== as.character(troph),]$type == 'resineux')& any(df[df$troph_func== as.character(troph),]$type == 'friche')){
+taxon_rf <- df[df$troph_func== as.character(troph),] %>%
   filter(type =='resineux'|type=='friche') %>%
   select(c('d15N_norm','C_absolute'))
-ado_rf <-adonis2(taxon_rf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+ado_rf <-adonis2(taxon_rf~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%
   filter(type =='resineux'|type=='friche'))
 pairwise_p['resineux vs. friche'] <- ado_rf$`Pr(>F)`[1]
 pairwise_r2['resineux vs. friche'] <- ado_rf$R2[1]
 }
 
-if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
-taxon_rp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+if (any(df[df$troph_func== as.character(troph),]$type == 'resineux')& any(df[df$troph_func== as.character(troph),]$type == 'prairie')){
+taxon_rp <- df[df$troph_func== as.character(troph),] %>%
   filter(type =='resineux'|type=='prairie') %>%
   select(c('d15N_norm','C_absolute'))
-ado_rp <-adonis2(taxon_rp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+ado_rp <-adonis2(taxon_rp~type,data=df[df$troph_func== as.character(troph), c('d15N_norm','C_absolute','type')]%>%
   filter(type =='resineux'|type=='prairie'))
 pairwise_p['resineux vs. prairie'] <- ado_rp$`Pr(>F)`[1]
 pairwise_r2['resineux vs. prairie'] <- ado_rp$R2[1]
@@ -280,145 +258,67 @@ return(rbind(adjusted_pairwise_p,data.frame(t(data.frame(pairwise_r2)))))
 ```
 
 ```{r}
-baet_hull<- baet+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-baet_hull
-```
+#Gathering all data into 2 dataframes, p-values indicate significance of the difference observed whether it's small or large, and R2 indicate the proportion of variation explained by the model (here by the type of land use)
 
-```{r}
-Test_hull_taxon('BAET')
-```
+df_p_values_troph <- rbind.fill(Test_hull_troph('Collector')['pairwise_p',],
+                          Test_hull_troph('Grazer')['pairwise_p',],
+                          Test_hull_troph('Shredder')['pairwise_p',],
+                          Test_hull_troph('Predator')['pairwise_p',],
+                          Test_hull_troph('Fish')['pairwise_p',])
+rownames(df_p_values_troph) <- c('Collectors', 'Grazers', 'Shredders', 'Predators', 'Fish')
+colnames(df_p_values_troph) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
 
-```{r}
-calop_hull <- calop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
+df_r2_values_troph <- rbind.fill(Test_hull_troph('Collector')['pairwise_r2',],
+                          Test_hull_troph('Grazer')['pairwise_r2',],
+                          Test_hull_troph('Shredder')['pairwise_r2',],
+                          Test_hull_troph('Predator')['pairwise_r2',],
+                          Test_hull_troph('Fish')['pairwise_r2',])
+                          
+rownames(df_r2_values_troph) <- c('Collectors', 'Grazers', 'Shredders', 'Predators', 'Fish')
+colnames(df_r2_values_troph) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
 
-```{r}
-Test_hull_taxon('CALOP')
-```
-
-```{r}
-gam_hull<- gam+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('GAM')
-```
-
-```{r}
-hepta_hull <- hepta+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('HEPTA')
-```
-
-```{r}
-#!!! ADJUST COLORS ON INKSCAPE
-hydrop_hull <- hydrop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-hydrop_hull
-```
-
-```{r}
-Test_hull_taxon('HYDROP')
-```
-
-```{r}
-perl_hull <- perl+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('PERL')
-```
-
-```{r}
-rhyaco_hull <- rhyaco+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('RHYACO')
-```
-
-```{r}
-simu_hull <- simu+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('SIMU')
-```
-
-```{r}
-vai_hull <- vai+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
-```
-
-```{r}
-Test_hull_taxon('VAI')
-```
-
-```{r}
-trf_hull <- trf+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+df_r2_values_troph <- df_r2_values_troph%>%  mutate_if(is.numeric, round, digits = 3)
+df_p_values_troph
 ```
 
 
 ```{r}
-Test_hull_taxon('TRF')
+mask_df_troph <- data.frame(lapply(df_p_values_troph, function(x){x<0.05}))
+df_r2_signi_troph <- data.frame(mapply(function(x, y) ifelse(y, x, "X"), df_r2_values_troph, mask_df_troph))
+rownames(df_r2_signi_troph) <- c('Collectors', 'Grazers', 'Shredders', 'Predators', 'Fish')
+colnames(df_r2_signi_troph) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
+df_r2_signi_troph
+```
+
+
+```{r}
+#setting the work direction
+setwd("C:\\Users\\cbodson\\Desktop")
+write.xlsx(df_r2_signi_troph, "Troph_areas_r2_significant.xlsx")
 ```
 
 ```{r}
-#!!! Correct legend and colors in INKSCAPE
-ggarrange(baet_hull,calop_hull,gam_hull,hepta_hull,hydrop_hull,perl_hull,rhyaco_hull,simu_hull,vai_hull,trf_hull, 
-          labels = c('A','B','C','D','E','F','G','H','I','J'),
-          ncol=4,
-          nrow = 3,
+collector_hull <- collector+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+
+grazer_hull <- grazer+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+
+shredder_hull <- shredder+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+
+predator_hull <- predator+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+
+fish_hull <- fish+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+ggarrange(collector_hull,grazer_hull,shredder_hull,predator_hull,fish_hull,
+          labels = c('A','B','C','D','E'),
+          ncol=3,
+          nrow = 2,
           label.x = 0.1,
           common.legend=TRUE,
           legend="right")
 ```
 
-
-```{r}
-#Gathering all data into 2 dataframes, p-values indicate significance of the difference observed whether it's small or large, and R2 indicate the proportion of variation explained by the model (here by the type of land use)
-df_p_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_p',],
-                          Test_hull_taxon('CALOP')['pairwise_p',],
-                          Test_hull_taxon('GAM')['pairwise_p',],
-                          Test_hull_taxon('HEPTA')['pairwise_p',],
-                          Test_hull_taxon('HYDROP')['pairwise_p',],
-                          Test_hull_taxon('PERL')['pairwise_p',],
-                          Test_hull_taxon('RHYACO')['pairwise_p',],
-                          Test_hull_taxon('SIMU')['pairwise_p',],
-                          Test_hull_taxon('VAI')['pairwise_p',],
-                          Test_hull_taxon('TRF')['pairwise_p',])
-rownames(df_p_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
-colnames(df_p_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
-
-df_r2_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_r2',],
-                          Test_hull_taxon('CALOP')['pairwise_r2',],
-                          Test_hull_taxon('GAM')['pairwise_r2',],
-                          Test_hull_taxon('HEPTA')['pairwise_r2',],
-                          Test_hull_taxon('HYDROP')['pairwise_r2',],
-                          Test_hull_taxon('PERL')['pairwise_r2',],
-                          Test_hull_taxon('RHYACO')['pairwise_r2',],
-                          Test_hull_taxon('SIMU')['pairwise_r2',],
-                          Test_hull_taxon('VAI')['pairwise_r2',],
-                          Test_hull_taxon('TRF')['pairwise_r2',])
-rownames(df_r2_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
-colnames(df_r2_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
-
-df_r2_values <- df_r2_values%>%  mutate_if(is.numeric, round, digits = 3)
-df_p_values
-```
-```{r}
-mask_df <- data.frame(lapply(df_p_values, function(x){x<0.05}))
-df_r2_signi <- data.frame(mapply(function(x, y) ifelse(y, x, "X"), df_r2_values, mask_df))
-rownames(df_r2_signi) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
-colnames(df_r2_signi) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
-df_r2_signi
-```
-
-```{r}
-#setting the work direction
-setwd("C:\\Users\\cbodson\\Desktop")
-write.xlsx(df_r2_signi, "Areas_r2_significant.xlsx")
-```
 
 
 Look further in detail at stations to identify a possible explanation for the 2 "branches" with large difference δ15N observed for prairies across the taxa 
@@ -426,7 +326,27 @@ Look further in detail at stations to identify a possible explanation for the 2 
 ```{r}
 ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=station))+xlab('δ13C (‰)')+ylab('δ15N (‰)')+xlim(xmin,xmax)+ylim(ymin,ymax)+theme_bw()
 ```
-Same but taxon by taxon
+
+Same but troph by troph 
+```{r}
+collector_prairie <- Plotify_troph_type("Collector", "prairie")
+grazer_prairie <- Plotify_troph_type("Grazer", "prairie")
+shredder_prairie <- Plotify_troph_type("Shredder", "prairie")
+predator_prairie <- Plotify_troph_type("Predator", "prairie")
+fish_prairie <- Plotify_troph_type("Fish", "prairie")
+```
+
+```{r}
+ggarrange(collector_prairie,grazer_prairie,shredder_prairie,predator_prairie,fish_prairie, 
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
+          ncol=3,
+          nrow = 2,
+          common.legend=TRUE,
+          legend="right")
+```
+
+
+taxon by taxon
 
 ```{r}
 baet_prairie <- Plotify_taxon_type('BAET','prairie')+scale_colour_manual(values=c("#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"))
@@ -685,4 +605,288 @@ ggarrange(bois_bn, friche_bn, prairie_bn, resineux_bn,
 Looking further into impact feeding behavior
 ```{r}
 ggplot(df[df$type ==as.character('prairie'),])+geom_point(aes(d13C_norm,d15N_norm, color=Troph_func))
+```
+```{r}
+# bois <- Plotify_type('bois')
+# friche <- Plotify_type('friche')
+# prairie <- Plotify_type('prairie')
+# resineux <- Plotify_type('resineux')
+# 
+# #creates a hull for isotopic area
+# 
+# bois_hull <- bois+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# friche_hull <- friche+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# prairie_hull <- prairie+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+# resineux_hull <- resineux+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=taxon_clean), expand = 0, radius = 0)
+
+```
+
+Isotopic frame in function of land use, not the most judicious as we separate the factors we want to compare
+
+```{r}
+# #png("C:/Users/cbodson/Desktop/test.png",
+# #    width=640, height=500)
+# ggarrange(bois, friche, prairie, resineux, 
+#           labels = c("bois", "friche", "prairie", "resineux"),
+#           label.x = 0,
+#           label.y = 1,
+#           ncol=2,
+#           nrow = 2,
+#           common.legend=TRUE,
+#           legend='right')
+# #dev.off()
+```
+
+Same with isotopic areas
+
+```{r}
+# png("C:/Users/cbodson/Desktop/test.png",
+#     width=640, height=500)
+# ggarrange(bois_hull, friche_hull, prairie_hull, resineux_hull, 
+#           labels = c("bois", "friche", "prairie", "resineux"),
+#           label.x = 0,
+#           label.y = 1,
+#           ncol=2,
+#           nrow = 2,
+#           common.legend=TRUE,
+#           legend='right')
+# dev.off()
+```
+
+
+
+Areas for each taxon in function of land use
++ procedure for PERMANOVA to test whether clusters are different two by two
+
+```{r}
+#Adonis doesn't want negative values for PERMANOVA
+df$C_absolute <- as.numeric(lapply(df$d13C_norm, function(x){abs(x)}))
+```
+
+```{r}
+Test_hull_taxon <- function(taxon_name){
+
+#Initializing vector with pairwise test p_values
+pairwise_p <- numeric()
+pairwise_r2 <- numeric()
+
+taxon_test <-df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute')]
+
+set.seed(46) #to ensure reproducibilty as we use permutations
+
+
+ado_all <-adonis2(taxon_test~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')])
+
+#Takes p-value and R2 results
+pairwise_p['all'] <- ado_all$`Pr(>F)`[1]
+pairwise_r2['all'] <- ado_all$R2[1]
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+  taxon_bf <- df[df$taxon_clean== as.character(taxon_name),] %>%  #clean with only land uses of interest
+    filter(type =='bois'|type=='friche') %>%
+    select(c('d15N_norm','C_absolute'))
+  ado_bf <-adonis2(taxon_bf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%filter(type =='bois'|type=='friche'))
+  pairwise_p['bois vs. friche'] <- ado_bf$`Pr(>F)`[1]
+  pairwise_r2['bois vs. friche'] <- ado_bf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+taxon_bp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='bois'|type=='prairie') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_bp <-adonis2(taxon_bp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='bois'|type=='prairie'))
+pairwise_p['bois vs. prairie'] <- ado_bp$`Pr(>F)`[1]
+pairwise_r2['bois vs. prairie'] <- ado_bp$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+taxon_pf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='prairie'|type=='friche') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_pf <-adonis2(taxon_pf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='prairie'|type=='friche'))
+pairwise_p['prairie vs. friche'] <- ado_pf$`Pr(>F)`[1]
+pairwise_r2['prairie vs. friche'] <- ado_pf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'bois')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')){
+taxon_br <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='bois'|type=='resineux') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_br <-adonis2(taxon_br~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='bois'|type=='resineux'))
+pairwise_p['bois vs. resineux'] <- ado_br$`Pr(>F)`[1]
+pairwise_r2['bois vs. resineux'] <- ado_br$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'friche')){
+taxon_rf <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='resineux'|type=='friche') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_rf <-adonis2(taxon_rf~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='resineux'|type=='friche'))
+pairwise_p['resineux vs. friche'] <- ado_rf$`Pr(>F)`[1]
+pairwise_r2['resineux vs. friche'] <- ado_rf$R2[1]
+}
+
+if (any(df[df$taxon_clean== as.character(taxon_name),]$type == 'resineux')& any(df[df$taxon_clean== as.character(taxon_name),]$type == 'prairie')){
+taxon_rp <- df[df$taxon_clean== as.character(taxon_name),] %>%
+  filter(type =='resineux'|type=='prairie') %>%
+  select(c('d15N_norm','C_absolute'))
+ado_rp <-adonis2(taxon_rp~type,data=df[df$taxon_clean== as.character(taxon_name), c('d15N_norm','C_absolute','type')]%>%
+  filter(type =='resineux'|type=='prairie'))
+pairwise_p['resineux vs. prairie'] <- ado_rp$`Pr(>F)`[1]
+pairwise_r2['resineux vs. prairie'] <- ado_rp$R2[1]
+}
+
+#As we increase the number of comparisons, we also increase the risk of rejecting the false hypothesis so we need to adjust p-values
+adjusted_pairwise_p <- data.frame(t(data.frame(p.adjust(pairwise_p))))
+rownames(adjusted_pairwise_p) <- 'pairwise_p'
+data.frame(t(data.frame(pairwise_r2)))
+
+return(rbind(adjusted_pairwise_p,data.frame(t(data.frame(pairwise_r2)))))
+}
+
+```
+
+```{r}
+baet_hull<- baet+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+baet_hull
+```
+
+```{r}
+Test_hull_taxon('BAET')
+```
+
+```{r}
+calop_hull <- calop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('CALOP')
+```
+
+```{r}
+gam_hull<- gam+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('GAM')
+```
+
+```{r}
+hepta_hull <- hepta+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('HEPTA')
+```
+
+```{r}
+#!!! ADJUST COLORS ON INKSCAPE
+hydrop_hull <- hydrop+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+hydrop_hull
+```
+
+```{r}
+Test_hull_taxon('HYDROP')
+```
+
+```{r}
+perl_hull <- perl+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('PERL')
+```
+
+```{r}
+rhyaco_hull <- rhyaco+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('RHYACO')
+```
+
+```{r}
+simu_hull <- simu+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('SIMU')
+```
+
+```{r}
+vai_hull <- vai+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+```{r}
+Test_hull_taxon('VAI')
+```
+
+```{r}
+trf_hull <- trf+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0, radius = 0)+theme(plot.margin=unit(c(1,0.5,0.2,0.5),"cm"))
+```
+
+
+```{r}
+Test_hull_taxon('TRF')
+```
+
+```{r}
+#!!! Correct legend and colors in INKSCAPE
+ggarrange(baet_hull,calop_hull,gam_hull,hepta_hull,hydrop_hull,perl_hull,rhyaco_hull,simu_hull,vai_hull,trf_hull, 
+          labels = c('A','B','C','D','E','F','G','H','I','J'),
+          ncol=4,
+          nrow = 3,
+          label.x = 0.1,
+          common.legend=TRUE,
+          legend="right")
+```
+
+
+```{r}
+#Gathering all data into 2 dataframes, p-values indicate significance of the difference observed whether it's small or large, and R2 indicate the proportion of variation explained by the model (here by the type of land use)
+df_p_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_p',],
+                          Test_hull_taxon('CALOP')['pairwise_p',],
+                          Test_hull_taxon('GAM')['pairwise_p',],
+                          Test_hull_taxon('HEPTA')['pairwise_p',],
+                          Test_hull_taxon('HYDROP')['pairwise_p',],
+                          Test_hull_taxon('PERL')['pairwise_p',],
+                          Test_hull_taxon('RHYACO')['pairwise_p',],
+                          Test_hull_taxon('SIMU')['pairwise_p',],
+                          Test_hull_taxon('VAI')['pairwise_p',],
+                          Test_hull_taxon('TRF')['pairwise_p',])
+rownames(df_p_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_p_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
+
+df_r2_values <- rbind.fill(Test_hull_taxon('BAET')['pairwise_r2',],
+                          Test_hull_taxon('CALOP')['pairwise_r2',],
+                          Test_hull_taxon('GAM')['pairwise_r2',],
+                          Test_hull_taxon('HEPTA')['pairwise_r2',],
+                          Test_hull_taxon('HYDROP')['pairwise_r2',],
+                          Test_hull_taxon('PERL')['pairwise_r2',],
+                          Test_hull_taxon('RHYACO')['pairwise_r2',],
+                          Test_hull_taxon('SIMU')['pairwise_r2',],
+                          Test_hull_taxon('VAI')['pairwise_r2',],
+                          Test_hull_taxon('TRF')['pairwise_r2',])
+rownames(df_r2_values) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_r2_values) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
+
+df_r2_values <- df_r2_values%>%  mutate_if(is.numeric, round, digits = 3)
+df_p_values
+```
+```{r}
+mask_df <- data.frame(lapply(df_p_values, function(x){x<0.05}))
+df_r2_signi <- data.frame(mapply(function(x, y) ifelse(y, x, "X"), df_r2_values, mask_df))
+rownames(df_r2_signi) <- c('Baetidae', 'Calopterygidae', 'Gammaridae', 'Heptageniidae', 'Hydropsychidae', 'Perlidae', 'Rhyacophilidae', 'Simuliidae', 'Salmo Trutta', 'Phoxinus phoxinus')
+colnames(df_r2_signi) <- c('All', "Woods/Wasteland"," Woods/Prairies", "Prairies/Wasteland", "Woods/Softwoods", "Softwoods/Wasteland", "Softwoods/Prairies")
+df_r2_signi
+```
+
+```{r}
+#setting the work direction
+setwd("C:\\Users\\cbodson\\Desktop")
+write.xlsx(df_r2_signi, "Areas_r2_significant.xlsx")
 ```
