@@ -19,7 +19,7 @@ library(plyr)
 library(dplyr)
 library(RColorBrewer)
 library(rstatix)
-#library(xlsx)
+library(xlsx)
 ```
 
 ```{r}
@@ -318,7 +318,23 @@ ggarrange(collector_prairie,grazer_prairie,shredder_prairie,predator_prairie,fis
           common.legend=TRUE,
           legend="right")
 ```
+Performing QQ plots to check normality of samples
 
+```{r}
+qq_grazer <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Grazer'),], x="d13C_norm", color="type")
+qq_collector <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Collector'),], x="d13C_norm", color="type")
+qq_shredder <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Shredder'),], x="d13C_norm", color="type")
+qq_predator <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Predator'),], x="d13C_norm", color="type")
+qq_fish <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Fish'),], x="d13C_norm", color="type")
+
+ggarrange(qq_collector,qq_grazer,qq_shredder,qq_predator,qq_fish,
+          labels = c('A','B','C','D','E'),
+          ncol=3,
+          nrow = 2,
+          label.x = 0,
+          common.legend=TRUE,
+          legend="right")
+```
 
 ```{r}
 df_troph <- df[, c('type',"troph_func","d15N_norm","d13C_norm")]
@@ -336,6 +352,23 @@ Boxplot_carbon <- ggboxplot(
 stat.test <- stat.test %>% add_xy_position(x = "type")
 Boxplot_carbon + stat_pvalue_manual(stat.test[stat.test$p.adj.signif != 'ns',], label = "p.adj.signif")
 ```
+```{r}
+qq_grazer_N <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Grazer'),], x="d15N_norm", color="type")
+qq_collector_N <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Collector'),], x="d15N_norm", color="type")
+qq_shredder_N <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Shredder'),], x="d15N_norm", color="type")
+qq_predator_N <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Predator'),], x="d15N_norm", color="type")
+qq_fish_N <- ggqqplot(data=df_troph[df_troph$troph_func == as.character('Fish'),], x="d15N_norm", color="type")
+
+ggarrange(qq_collector_N,qq_grazer_N,qq_shredder_N,qq_predator_N,qq_fish_N,
+          labels = c('A','B','C','D','E'),
+          ncol=3,
+          nrow = 2,
+          label.x = 0,
+          common.legend=TRUE,
+          legend="right")
+```
+```
+
 
 ```{r}
 stat.test <- df_troph %>%
@@ -350,11 +383,172 @@ stat.test <- stat.test %>% add_xy_position(x = "type")
 Boxplot_nitrogen + stat_pvalue_manual(stat.test[stat.test$p.adj.signif != 'ns',], label = "p.adj.signif")
 ```
 
+```{r}
+var.test(df_troph[df_troph$troph_func == as.character('Grazer') & df_troph$type == as.character('prairie'),]$d15N_norm, df_troph[df_troph$troph_func == as.character('Grazer') & df_troph$type == as.character('resineux'),]$d15N_norm, alternative = "greater")
+```
+
+```{r}
+#create function with Welch Two sample t-tests significant results as output
+
+F_test_type_alt <- function(troph,type1,type2,alternative_asked){
+  x <- df_troph[df_troph$troph_func == as.character(troph),]%>%
+         filter(type ==as.character(type1)) 
+  y <- df_troph[df_troph$troph_func == as.character(troph),]%>%
+         filter(type ==as.character(type2)) 
+  if (nrow(x)>1 & nrow(y)>1){
+  test <- var.test(x$d15N_norm,y$d15N_norm,alternative=as.character(alternative_asked))
+  }
+  else {
+    test <- NaN
+  }
+  return(test)
+}
+```
 
 
+```{r}
+N_var_F_test <- function(troph) {
+  #create empty df
+  N_var_colnames <- c('different','greater','less')
+  N_var_df <- data.frame(matrix(nrow=length(c(colnames(df_p_values)[c(2:length(df_p_values))])),ncol=length(N_var_colnames)))
+  colnames(N_var_df) <- N_var_colnames
+  N_var_df$troph_func <- rep(troph,nrow(N_var_df))
+  N_var_df$comparison <- c(colnames(df_p_values)[c(2:length(df_p_values))])
+  
+  #significance threshold
+  thr <- 0.05
+  
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'bois')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'friche')){
+    test_two_sided <- F_test_type_alt(troph,'bois','friche','two.sided')
+    test_greater <- F_test_type_alt(troph,'bois','friche','greater')
+    test_less <- F_test_type_alt(troph,'bois','friche','less')
+  
+    if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+      test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+      for (i in test_list) {
+        if (i < thr){
+         N_var_df[1,match(i,test_list)] <- i
+        }
+        else{
+         N_var_df[1,match(i,test_list)] <- "ns"
+        }
+      }
+    }
+  }
+
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'bois')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'prairie')){
+    test_two_sided <- F_test_type_alt(troph,'bois','prairie','two.sided')
+    test_greater <- F_test_type_alt(troph,'bois','prairie','greater')
+    test_less <- F_test_type_alt(troph,'bois','prairie','less')
+  
+    if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+      test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+      for (i in test_list) {      
+        if (i < thr){
+          N_var_df[2,match(i,test_list)] <- i
+        }
+        else{
+          N_var_df[2,match(i,test_list)] <- "ns"
+        }
+       }
+     }
+   }
+
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'prairie')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'friche')){
+    test_two_sided <- F_test_type_alt(troph,'prairie','friche','two.sided')
+    test_greater <- F_test_type_alt(troph,'prairie','friche','greater')
+    test_less <- F_test_type_alt(troph,'prairie','friche','less')
+  
+    if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+      test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+       for (i in test_list) { 
+        if (i < thr){
+         N_var_df[3,match(i,test_list)] <- i
+        }
+        else{
+         N_var_df[3,match(i,test_list)] <- "ns"
+        }
+       }
+     }
+  }
+
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'bois')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'resineux')){
+    test_two_sided <- F_test_type_alt(troph,'bois','resineux','two.sided')
+    test_greater <- F_test_type_alt(troph,'bois','resineux','greater')
+    test_less <- F_test_type_alt(troph,'bois','resineux','less')
+    
+    
+    if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+        test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+        for (i in test_list) {
+          if (i < thr){
+           N_var_df[4,match(i,test_list)] <- i
+          }
+          else{
+           N_var_df[4,match(i,test_list)] <- "ns"
+          }
+        }
+      }
+  }
+
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'resineux')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'friche')){
+    test_two_sided <- F_test_type_alt(troph,'resineux','friche','two.sided')
+    test_greater <- F_test_type_alt(troph,'resineux','friche','greater')
+    test_less <- F_test_type_alt(troph,'resineux','friche','less')
+    
+      if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+        test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+        for (i in test_list) {     
+          if (i < thr){
+            N_var_df[5,match(i,test_list)] <- i
+          }
+          else{
+            N_var_df[5,match(i,test_list)] <- "ns"
+          }
+        }
+      }
+  }
+
+  if (any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'resineux')& any(df_troph[df_troph$troph_func == as.character(troph),]$type == 'prairie')){
+    test_two_sided <- F_test_type_alt(troph,'resineux','prairie','two.sided')
+    test_greater <- F_test_type_alt(troph,'resineux','prairie','greater')
+    test_less <- F_test_type_alt(troph,'resineux','prairie','less')
+    
+  
+    if (!any(is.na(test_two_sided)) & !any(is.na(test_greater)) & !any(is.na(test_less))){
+      test_list <- c(test_two_sided$p.value,test_greater$p.value,test_less$p.value)
+      for (i in test_list) {
+       if (i < thr){
+        N_var_df[6,match(i,test_list)] <- i
+       }
+       else{
+        N_var_df[6,match(i,test_list)] <- "ns"
+       }
+      }
+    }
+  }
+  
+return(N_var_df)
+}
+```
 
 
+```{r}
+N_var_collector <- N_var_F_test('Collector')
+N_var_grazer <- N_var_F_test('Grazer')
+N_var_shredder <- N_var_F_test('Shredder')
+N_var_predator <- N_var_F_test('Predator')
+N_var_fish <- N_var_F_test('Fish')
 
+N_var_all <- rbind(N_var_collector,N_var_grazer,N_var_shredder,N_var_predator,N_var_fish)
+N_var_prairies <- N_var_all[grep("Prairies", N_var_all$comparison), ]%>% select(-different)%>%  mutate_if(is.numeric, round, digits = 4)
+```
+
+```{r}
+# #setting the work direction
+# setwd("C:\\Users\\cbodson\\Desktop")
+# write.xlsx(N_var_prairies, "Prairies_var_significant.xlsx")
+```
 
 taxon by taxon
 
@@ -598,7 +792,7 @@ ggarrange(baet_box_nitrogen,calop_box_nitrogen,gam_box_nitrogen,hepta_box_nitrog
           ncol=4,
           nrow = 3)
 ```
-Same by lund use type, but not the most judicious
+Same by land use type, but not the most judicious
 ```{r}
 ggarrange(bois_bc, friche_bc, prairie_bc, resineux_bc, 
           labels = c("bois", "friche", "prairie", "resineux"),
