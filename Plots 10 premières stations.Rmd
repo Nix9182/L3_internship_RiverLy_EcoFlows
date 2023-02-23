@@ -22,31 +22,46 @@ library(rstatix)
 #library(xlsx)
 ```
 
+
+
 ```{r}
-#Creating a function to clean taxa names to use as a color filter
-Clean_String <-function(string) {
-  new_string <- str_split(string, "_")[[1]][2]
-  new_string <- str_replace_all(new_string, "[^A-Z]", "")[[1]][1]
+Clean_String<-function(string) {
+  # new_string <- str_split(string, c("_"))[[1]]
+  # new_string <- str_split(new_string, c(" "))
+  new_string<- strsplit(string, "[- _0-9]")[[1]]
+  for (str in new_string) {
+  if (str %in% c("ASP", "CAS", "BAET","CALOP","GAM","GAMM","HEPTA","HYDROP","HYDRO","PERL","RHYACO", "RHYACOsp", "SIMU","SIMUL","VAI","TRF")) {
+    new_string <-str
+    break
+  }
+  }
   return(new_string)
 }
 ```
 
 ```{r}
-df <- read_excel("dataset_isotopes_compile.xlsx")
+df1 <- read_excel("dataset_isotopes_compile.xlsx")
+df2 <- read_excel("dataset_isotopes_compile_second.xlsx")
+df <- rbind(df1,df2)
 #We have to use as.character to be able to put the new collection of names while being able to use them in aes()
 taxon_clean <- as.character(lapply(df$taxon, function(x){Clean_String(x)}))
 #creating a new column
 df["taxon_clean"]<-taxon_clean
+df$taxon_clean[df$taxon_clean=="GAMM"] <- "GAM"
+df$taxon_clean[df$taxon_clean=="HYDRO"] <- "HYDROP"
+df$taxon_clean[df$taxon_clean=="SIMUL"] <- "SIMU"
+df$taxon_clean[df$taxon_clean=="RHYACOsp"] <- "RHYACO"
+df$type[df$type=="Bois"] <- "bois"
 #getting rid of the aspartame data as it used only for calibration 
 df<- df[df$taxon_clean !=as.character('ASP'),]
 ```
 
 ```{r}
 #set limits for axis
-xmin <- -38.5
-xmax <- -24
+xmin <- -40
+xmax <- -23
 ymin <- 1
-ymax <- 11
+ymax <- 12
 ```
 
 
@@ -129,7 +144,7 @@ fish <- Plotify_troph("Fish")
 #ggarange takes the legend of the first plot for common legends
 #png("C:/Users/cbodson/Desktop/Isotopic_Frame_by_taxon.png", width=750, height=500)
 ggarrange(collector+scale_color_manual(name='Land Use',values=c("#F8766D","#7CAE00","#00BFC4","#C77CFF"), labels=c("Woods","Wastelands","Prairies","Softwoods")),grazer,shredder,predator,fish, 
-          labels = c('A','B','C','D','E'),
+          labels = c('Collector','Grazer','Shredder','Predator','Fish'),
           ncol=3,
           nrow = 2,
           label.x = 0.1,
@@ -285,7 +300,7 @@ fish_hull <- fish+geom_mark_hull(aes(d13C_norm,d15N_norm, fill=type), expand = 0
 
 ```{r}
 ggarrange(collector_hull,grazer_hull,shredder_hull,predator_hull,fish_hull,
-          labels = c('A','B','C','D','E'),
+          labels = c('Collector','Grazer','Shredder','Predator','Fish'),
           ncol=3,
           nrow = 2,
           label.x = 0.1,
@@ -312,7 +327,7 @@ fish_prairie <- Plotify_troph_type("Fish", "prairie")
 
 ```{r}
 ggarrange(collector_prairie,grazer_prairie,shredder_prairie,predator_prairie,fish_prairie, 
-          labels = c('A','B','C','D','E','F','G','H','I','J'),
+          labels = c('Collector','Grazer','Shredder','Predator','Fish'),
           ncol=3,
           nrow = 2,
           common.legend=TRUE,
@@ -921,7 +936,7 @@ Test_hull_taxon('TRF')
 # df_r2_signi
 # ```
 
-```{r}
+#```{r}
 # #setting the work direction
 # setwd("C:\\Users\\cbodson\\Desktop")
 # write.xlsx(df_r2_signi, "Areas_r2_significant.xlsx")
